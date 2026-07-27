@@ -121,6 +121,7 @@ def on_message(client, userdata, msg):
                 .field("room_temp", hub_data[7]) \
                 .field("presence_rate", hub_data[9]) \
                 .field("active_setpoint", hub_data[5]) \
+                .field("ctrl_online", controller_data[0]) \
                 .field("hub_data", json.dumps(hub_data))  # Guardar el array completo como JSON
 
             if controller_data[0] == 1:  # Solo si el controlador está activo
@@ -147,10 +148,9 @@ def on_message(client, userdata, msg):
                 .field("rssi", payload_metadata.get("rssi", 0)) \
                 .field("wifi_channel", payload_metadata.get("channel", 0)) \
                 .field("local_ip", payload_metadata.get("local_ip", "unknown")) \
-                .field("last_ntp_update", payload_metadata.get("last_ntp_update", 0)) \
+                .field("firmware_version", payload_metadata.get("firmw", "unknown")) \
                 .field("cpu_temp", payload_metadata.get("cpu_temp", 0)) \
-                .field("free_heap", payload_metadata.get("free_heap", 0)) \
-                .field("fs_usage", payload_metadata.get("fs_usage", 0)) \
+                .field("min_free_heap", payload_metadata.get("free_heap", 0)) \
                 .field("last_reset_reason", payload_metadata.get("reset_reason", 0)) \
 
             write_api.write(bucket=INFLUX_BUCKET, record=point)
