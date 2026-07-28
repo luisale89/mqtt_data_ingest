@@ -87,7 +87,7 @@ def on_message(client, userdata, msg):
             point = Point("hub_connection") \
                 .tag("device_id", device_id) \
                 .field("status", payload_value) \
-                .field("retained_at", timestamp) \
+                .field("status_code", 1 if payload_value == "connected" else 0) \
                 .field("mqttconn_err", payload_metadata.get("mqttconn_err", 0))
 
             write_api.write(bucket=INFLUX_BUCKET, record=point)
@@ -96,11 +96,15 @@ def on_message(client, userdata, msg):
 
         if resource == "incident":
             # Manejar eventos de incidentes
+            ctrl_fault_code = payload_metadata.get("controller_ac", 0)
+            moni_fault_code = payload_metadata.get("monitor_ac", 0)
+            system_alarm_code = moni_fault_code if moni_fault_code != 0 else ctrl_fault_code
             point = Point("hub_incident") \
                 .tag("device_id", device_id) \
                 .field("fault_state", payload_value) \
-                .field("ctrl_alarm_code", payload_metadata.get("controller_ac", 0)) \
-                .field("moni_alarm_code", payload_metadata.get("monitor_ac", 0)) \
+                .field("system_alarm_code", system_alarm_code) \
+                .field("ctrl_alarm_code", ctrl_fault_code) \
+                .field("moni_alarm_code", moni_fault_code) \
                 .field("tmbf_ms", payload_metadata.get("tmbf_ms", 0)) \
                 .field("recovery_attempts", payload_metadata.get("recov_attempts", 0)) \
                 .field("attempts_left", payload_metadata.get("attempts_left", 0)) \
@@ -114,6 +118,7 @@ def on_message(client, userdata, msg):
             # Manejar datos de telemetría
             hub_data = payload_metadata.get("hub", [0])
             controller_data = payload_metadata.get("ctrl", [0])
+            monitor_data = payload_metadata.get("moni", [0])
             point = Point("hub_telemetry") \
                 .tag("device_id", device_id) \
                 .field("system_state", payload_value) \
@@ -122,11 +127,13 @@ def on_message(client, userdata, msg):
                 .field("presence_rate", hub_data[9]) \
                 .field("active_setpoint", hub_data[5]) \
                 .field("ctrl_online", controller_data[0]) \
+                .field("moni_online", monitor_data[0]) \
                 .field("hub_data", json.dumps(hub_data))  # Guardar el array completo como JSON
 
             if controller_data[0] == 1:  # Solo si el controlador está activo
                 point.field("supply_temp", controller_data[1])
                 point.field("return_temp", controller_data[2])
+                point.field("delta_temp", abs(controller_data[2] - controller_data[1]))
                 point.field("compressor_relay", controller_data[3])
                 point.field("fan_relay", controller_data[4])
                 point.field("drain_switch", controller_data[5])
@@ -143,6 +150,7 @@ def on_message(client, userdata, msg):
             # Manejar actualizaciones de salud del sistema
             point = Point("hub_health") \
                 .tag("device_id", device_id) \
+                .field("online", 1) \
                 .field("free_heap", payload_value) \
                 .field("ssid", payload_metadata.get("ssid", "unknown")) \
                 .field("rssi", payload_metadata.get("rssi", 0)) \
