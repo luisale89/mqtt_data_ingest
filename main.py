@@ -76,7 +76,6 @@ def on_message(client, userdata, msg):
         payload_variable = payload.get("variable", "unknown")
         payload_value = payload.get("value", None)
         payload_metadata = payload.get("metadata", {})
-        timestamp = payload_metadata.get("time", int(time.time()))
 
         # -------------------------------------------------------------------
         # TRANSFORMACIÓN A INFLUX LINE PROTOCOL
@@ -123,17 +122,17 @@ def on_message(client, userdata, msg):
                 .tag("device_id", device_id) \
                 .field("system_state", payload_value) \
                 .field("system_fault", hub_data[0]) \
-                .field("room_temp", hub_data[7]) \
-                .field("presence_rate", hub_data[9]) \
+                .field("room_temp", float(hub_data[7])) \
+                .field("presence_rate", float(hub_data[9])) \
                 .field("active_setpoint", hub_data[5]) \
                 .field("ctrl_online", controller_data[0]) \
                 .field("moni_online", monitor_data[0]) \
                 .field("hub_data", json.dumps(hub_data))  # Guardar el array completo como JSON
 
             if controller_data[0] == 1:  # Solo si el controlador está activo
-                point.field("supply_temp", controller_data[1])
-                point.field("return_temp", controller_data[2])
-                point.field("delta_temp", abs(controller_data[2] - controller_data[1]))
+                point.field("supply_temp", float(controller_data[1]))
+                point.field("return_temp", float(controller_data[2]))
+                point.field("delta_temp", abs(float(controller_data[2]) - float(controller_data[1])))
                 point.field("compressor_relay", controller_data[3])
                 point.field("fan_relay", controller_data[4])
                 point.field("drain_switch", controller_data[5])
@@ -157,7 +156,7 @@ def on_message(client, userdata, msg):
                 .field("wifi_channel", payload_metadata.get("channel", 0)) \
                 .field("local_ip", payload_metadata.get("local_ip", "unknown")) \
                 .field("firmware_version", payload_metadata.get("firmw", "unknown")) \
-                .field("cpu_temp", payload_metadata.get("cpu_temp", 0)) \
+                .field("cpu_temp", float(payload_metadata.get("cpu_temp", 0))) \
                 .field("min_free_heap", payload_metadata.get("free_heap", 0)) \
                 .field("last_reset_reason", payload_metadata.get("reset_reason", 0)) \
 
